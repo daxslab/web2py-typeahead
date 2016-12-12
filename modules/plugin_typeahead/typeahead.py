@@ -28,6 +28,7 @@ class TypeheadWidget(object):
         self.distinct = distinct
         self.min_length = min_length
         self.fields = [field]
+        self.id_field = id_field
         if id_field:
             self.is_reference = True
             self.fields.append(id_field)
@@ -76,19 +77,24 @@ class TypeheadWidget(object):
 
         attr['_name'] = field.name
 
+        str_fields = ''
+        for requested_field in self.fields:
+            str_fields += requested_field.name + ': ' + 'item.' + requested_field.name + ','
+
         prefetch_code = """
                 prefetch: {
                     url: '%(url)s?request_json=True&prefetch=True&lang='+encodeURIComponent('%(language)s'),
                     filter: function(list) {
                         return $.map(list, function(item) {
                             return {
-                                name: item.name,
-                                id: item.id
+                                %(fields)s
                             };
                         });
                     }
                 },
-        """ % dict(url=self.url, language=current.T.http_accept_language)
+        """ % dict(url=self.url, language=current.T.http_accept_language, fields=str_fields)
+
+
 
         remote_code = """
                 remote: {
@@ -97,12 +103,12 @@ class TypeheadWidget(object):
                     filter: function(list) {
                         return $.map(list, function(item) {
                             return {
-                                name: item.name
+                                %(fields)s
                             };
                         });
                     }
                 },
-        """ % dict(url=self.url, language=current.T.http_accept_language)
+        """ % dict(url=self.url, language=current.T.http_accept_language, fields=str_fields)
 
         bloodhound_code = """
             var items = new Bloodhound({
@@ -135,7 +141,7 @@ class TypeheadWidget(object):
             );
         """ % dict(input_id=attr['_id'] if not self.is_reference else self.keyword,
                    min_length=self.min_length,
-                   fieldname=field.name,
+                   fieldname=self.fields[0].name,
                    limit_by=limit_by_code
                    )
 
@@ -143,12 +149,12 @@ class TypeheadWidget(object):
 
             script += """
             $('#%(typeahead_id)s').bind('typeahead:select', function(ev, suggestion) {
-                $('#%(input_id)s').val(suggestion.id);
-                console.log(suggestion.id);
+                $('#%(input_id)s').val(suggestion.%(id_field_name)s);
             });
             """ % dict(
                 input_id=attr['_id'],
-                typeahead_id=self.keyword
+                typeahead_id=self.keyword,
+                id_field_name=self.id_field.name
             )
 
             del attr['_class']
