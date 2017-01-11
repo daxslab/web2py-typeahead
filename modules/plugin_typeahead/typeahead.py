@@ -159,8 +159,10 @@ class TypeheadWidget(object):
 
             del attr['_class']
             attr['_type'] = 'hidden'
+            input_value_row = self.db(self.id_field == value).select().first()
+            input_value = "" if not input_value_row else input_value_row[self.fields[0]]
             return CAT(
-                INPUT(_id=self.keyword, _class='string form-control'),
+                INPUT(_id=self.keyword, _class='string form-control', _value=input_value),
                 INPUT(**attr),
                 SCRIPT(script)
             )
